@@ -10,7 +10,7 @@ CulturaVibe — Actividad 8: Consumo de APIs
 Equipo: 13
 
 ## Descripción del Proyecto
-CulturaVibe es un sistema de eventos culturales en México construido con React y Vite. Muestra la cartelera real de Ticketmaster (más de 2,000 eventos en los próximos 6 meses), con búsqueda, filtros por categoría y por estado, orden por fecha o precio, y paginación reflejada en la URL. Los usuarios pueden crear una cuenta, agendar eventos, ver sus recordatorios y comprar boletos en Ticketmaster. Todo con un diseño moderno en modo oscuro (Dark Mode).
+CulturaVibe es un sistema de eventos culturales en México construido con React y Vite. Muestra la cartelera real de Ticketmaster (solo los eventos con boletos a la venta, de más de 2,000 eventos en los próximos 6 meses), con búsqueda, filtros por categoría y por estado, orden por fecha o precio, y paginación reflejada en la URL. Los usuarios pueden crear una cuenta, agendar eventos, ver sus recordatorios y comprar boletos en Ticketmaster. Todo con un diseño moderno en modo oscuro (Dark Mode).
 
 ## Enlace del Proyecto Desplegado
 El sistema está funcionando en vivo en el VPS de Contabo (Ubuntu):
