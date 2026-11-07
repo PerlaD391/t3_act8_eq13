@@ -6,6 +6,9 @@ import {
   defaultPreferences,
   NOTIFICATION_CATEGORIES,
   NOTIFICATION_STATES,
+  getFirebaseProfile,
+  updateFirebaseProfile,
+  changeFirebasePassword,
 } from '../services/auth';
 
 const CATEGORY_LABELS = {
@@ -26,15 +29,46 @@ const STATE_LABELS = {
   MOR: 'Morelos',
 };
 
-export default function Settings({ user, role }) {
+export default function Settings({ user, role, setUser }) {
   const [preferences, setPreferences] = useState(defaultPreferences());
   const [saved, setSaved] = useState(false);
   const [loadingPrefs, setLoadingPrefs] = useState(true);
+
+  // Perfil editable.
+  const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.name || 'Usuario';
+  const [editName, setEditName] = useState(displayName);
+  const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [memberSince, setMemberSince] = useState('');
+  const [profileMsg, setProfileMsg] = useState('');
+  const [profileError, setProfileError] = useState('');
+
+  // Contraseña (solo cuentas de Firebase).
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMsg, setPasswordMsg] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     loadPreferences(user?.firebaseUid)
       .then(setPreferences)
       .finally(() => setLoadingPrefs(false));
+  }, [user?.firebaseUid]);
+
+  useEffect(() => {
+    setEditName(displayName);
+    setEditPhone(user?.phone || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email, user?.firebaseUid]);
+
+  useEffect(() => {
+    if (!user?.firebaseUid) return;
+    getFirebaseProfile(user.firebaseUid)
+      .then((profile) => {
+        if (profile?.createdAt) {
+          setMemberSince(new Date(profile.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }));
+        }
+      })
+      .catch(() => {});
   }, [user?.firebaseUid]);
 
   const toggleCategory = (category) => {
@@ -63,7 +97,54 @@ export default function Settings({ user, role }) {
     setTimeout(() => setSaved(false), 3000);
   };
 
-  const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.name || 'Usuario';
+  const handleSaveProfile = async () => {
+    setProfileError('');
+    setProfileMsg('');
+    const name = editName.trim();
+    if (!name) {
+      setProfileError('Escribe tu nombre.');
+      return;
+    }
+    try {
+      if (user?.firebaseUid) {
+        await updateFirebaseProfile({ name, phone: editPhone.trim() });
+      }
+      const [firstName, ...rest] = name.split(' ');
+      const updated = { ...user, firstName: firstName || '', lastName: rest.join(' '), phone: editPhone.trim() };
+      localStorage.setItem('user', JSON.stringify(updated));
+      setUser?.(updated);
+      setProfileMsg('Perfil actualizado.');
+    } catch {
+      setProfileError('No se pudo guardar el perfil. Inténtalo de nuevo.');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    setPasswordMsg('');
+    if (newPassword.length < 6) {
+      setPasswordError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Las contraseñas no coinciden.');
+      return;
+    }
+    try {
+      await changeFirebasePassword(newPassword);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordMsg('Contraseña actualizada.');
+    } catch (err) {
+      if (err?.code === 'auth/requires-recent-login') {
+        setPasswordError('Por seguridad, cierra sesión y vuelve a entrar para cambiar tu contraseña.');
+      } else if (err?.code === 'auth/weak-password') {
+        setPasswordError('La contraseña debe tener al menos 6 caracteres.');
+      } else {
+        setPasswordError('No se pudo cambiar la contraseña. Inténtalo de nuevo.');
+      }
+    }
+  };
 
   return (
     <div className="mx-auto max-w-[1440px]">
@@ -72,7 +153,8 @@ export default function Settings({ user, role }) {
         <h2 className="text-3xl font-extrabold text-white">Configuración de la Cuenta</h2>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Perfil */}
         <section className="rounded-3xl border border-white/5 bg-white/5 p-8 backdrop-blur-md">
           <div className="flex items-center gap-4 mb-6">
             {user?.image ? (
@@ -86,17 +168,22 @@ export default function Settings({ user, role }) {
               <h3 className="text-xl font-bold text-white">{displayName}</h3>
               <p className="text-sm text-fuchsia-400 font-semibold">{role}</p>
               {user?.firebaseUid && <p className="text-xs text-emerald-400 font-medium">Cuenta verificada por correo</p>}
+              {memberSince && <p className="text-xs text-slate-400">Miembro desde {memberSince}</p>}
             </div>
           </div>
 
           <div className="space-y-4">
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Nombre completo</span>
+              <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-violet-500" />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Teléfono (para avisos por SMS)</span>
+              <input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="Ej. 55 1234 5678" className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-violet-500" />
+            </label>
             <div className="border-b border-white/5 pb-2">
               <p className="text-xs text-slate-500 uppercase">Correo Electrónico</p>
               <p className="text-white">{user?.email || '—'}</p>
-            </div>
-            <div className="border-b border-white/5 pb-2">
-              <p className="text-xs text-slate-500 uppercase">Teléfono</p>
-              <p className="text-white">{user?.phone || '—'}</p>
             </div>
             {user?.gender && (
               <div className="border-b border-white/5 pb-2">
@@ -110,10 +197,49 @@ export default function Settings({ user, role }) {
                 <p className="text-white">{user.age} años</p>
               </div>
             )}
+            {profileError && <p className="text-sm font-medium text-red-400">{profileError}</p>}
+            {profileMsg && <p className="text-sm font-medium text-emerald-400">{profileMsg}</p>}
+            <button onClick={handleSaveProfile} className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-90">
+              Guardar perfil
+            </button>
+            {!user?.firebaseUid && <p className="text-center text-xs text-slate-500">Con la cuenta de prueba, los cambios solo se guardan en este navegador.</p>}
           </div>
         </section>
 
+        {/* Contraseña */}
         <section className="rounded-3xl border border-white/5 bg-white/5 p-8 backdrop-blur-md">
+          <div className="mb-6 flex items-center gap-3">
+            <Icon name="lock" size={28} className="text-fuchsia-400" />
+            <div>
+              <h3 className="text-xl font-bold text-white">Cambiar contraseña</h3>
+              <p className="text-sm text-slate-400">Solo para cuentas creadas con correo y contraseña.</p>
+            </div>
+          </div>
+          {user?.firebaseUid ? (
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-slate-300">Nueva contraseña</span>
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-violet-500" />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-slate-300">Confirmar nueva contraseña</span>
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repite la contraseña" className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-violet-500" />
+              </label>
+              {passwordError && <p className="text-sm font-medium text-red-400">{passwordError}</p>}
+              {passwordMsg && <p className="text-sm font-medium text-emerald-400">{passwordMsg}</p>}
+              <button onClick={handleChangePassword} className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-90">
+                Cambiar contraseña
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Estás usando la cuenta de prueba. Para cambiar contraseña, crea una cuenta con tu correo desde “Crear cuenta” y verifícala.
+            </p>
+          )}
+        </section>
+
+        {/* Notificaciones y recordatorios */}
+        <section className="rounded-3xl border border-white/5 bg-white/5 p-8 backdrop-blur-md lg:col-span-2">
           <div className="mb-6 flex items-center gap-3">
             <Icon name="settings" size={28} className="text-fuchsia-400" />
             <div>
