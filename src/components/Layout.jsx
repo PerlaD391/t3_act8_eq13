@@ -19,12 +19,14 @@ export default function Layout({ children, user, role, setUser }) {
   const navItems = [
     { label: "Panel Principal", icon: "home", path: "/dashboard" },
     { label: "Calendario de Eventos", icon: "calendar", path: "/catalog" },
+    { label: "Mis Eventos", icon: "ticket", path: "/mis-eventos" },
     { label: "Directorio de Artistas", icon: "users", path: "/artists" },
     { label: "Configuración", icon: "settings", path: "/settings" },
   ];
 
   const getTitle = () => {
     if (location.pathname === '/catalog') return "Calendario de Eventos";
+    if (location.pathname === '/mis-eventos') return "Mis Eventos";
     if (location.pathname === '/artists') return "Directorio de Artistas";
     if (location.pathname === '/settings') return "Configuración";
     return "Panel Principal";
