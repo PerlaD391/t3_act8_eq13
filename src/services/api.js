@@ -156,6 +156,13 @@ const fetchAllEvents = async ({ search = '', category = '', state = '' }) => {
     seen.add(event.id);
     return true;
   });
+  // Solo eventos con boletos a la venta: se quitan los de venta cerrada,
+  // cancelados, pospuestos o reprogramados. Los eventos sin código de
+  // estado se conservan (por ejemplo, los de respaldo).
+  merged = merged.filter((event) => {
+    const code = event.dates?.status?.code;
+    return !code || code === 'onsale';
+  });
   merged.sort((a, b) => {
     const dateA = a.dates?.start?.localDate || '';
     const dateB = b.dates?.start?.localDate || '';
