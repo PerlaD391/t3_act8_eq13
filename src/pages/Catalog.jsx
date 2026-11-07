@@ -34,7 +34,7 @@ export default function Catalog() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [events, setEvents] = useState([]);
   const [total, setTotal] = useState(0);
-  const [source, setSource] = useState('ticketmaster');
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
@@ -88,7 +88,7 @@ export default function Catalog() {
       .then((data) => {
         setEvents(data.events);
         setTotal(data.total);
-        setSource(data.source || 'ticketmaster');
+        setLoadError(Boolean(data.error));
         setError('');
       })
       .catch(() => setError('No se pudieron cargar los eventos.'))
@@ -147,9 +147,9 @@ export default function Catalog() {
         </div>
       </div>
 
-      {source === 'fallback' && !loading && (
-        <p className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-          Ticketmaster no respondió en este momento, así que se muestran los eventos de respaldo.
+      {loadError && !loading && events.length === 0 && (
+        <p className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          No se pudieron cargar los eventos de Ticketmaster. Revisa tu conexión e inténtalo de nuevo más tarde.
         </p>
       )}
 
