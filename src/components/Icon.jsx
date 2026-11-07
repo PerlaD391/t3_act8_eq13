@@ -20,6 +20,9 @@ export default function Icon({ name, size = 20, className = "" }) {
     users: (<> <circle cx="9" cy="8" r="4" /> <path d="M2 21a7 7 0 0 1 14 0M16 5a4 4 0 0 1 0 7M18 15a6 6 0 0 1 4 6" /> </>),
     x: <path d="m6 6 12 12M18 6 6 18" />,
     theater: (<> <path d="M4 4h16v16H4z" /> <circle cx="9" cy="9" r="2" /> <circle cx="15" cy="9" r="2" /> <path d="M8 15c1.5 1.5 6.5 1.5 8 0" /> </>),
+    ticket: (<> <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /> <path d="M13 5v2M13 11v2M13 17v2" /> </>),
+    external: (<> <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /> <path d="M15 3h6v6" /> <path d="M10 14 21 3" /> </>),
+    check: <path d="M20 6 9 17l-5-5" />,
     "map-pin": (<> <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z" /> <circle cx="12" cy="10" r="3" /> </>),
     star: <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
   }
