@@ -14,11 +14,17 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedRole = localStorage.getItem('role');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setRole(storedRole || 'Admin');
+    try {
+      const storedUser = localStorage.getItem('user');
+      const storedRole = localStorage.getItem('role');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        setRole(storedRole || 'Admin');
+      }
+    } catch {
+      // Si los datos guardados están corruptos, se borran y se vuelve al login.
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
     }
     setLoading(false);
   }, []);

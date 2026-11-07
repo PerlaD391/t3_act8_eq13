@@ -8,7 +8,14 @@ export default function EventDetail() {
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [agendado, setAgendado] = useState(false);
+  const [agendado, setAgendado] = useState(() => {
+    try {
+      const misEventos = JSON.parse(localStorage.getItem('misEventos') || '[]');
+      return misEventos.some(e => e.id === id);
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -26,7 +33,7 @@ export default function EventDetail() {
       misEventos.push({ id, name: event.name, date: event.dates?.start?.localDate });
       localStorage.setItem('misEventos', JSON.stringify(misEventos));
     }
-    alert('¡Evento agendado con éxito! Revisa tu correo para más detalles.');
+    alert('¡Evento agendado con éxito! Lo verás marcado como agendado cuando vuelvas a esta página.');
   };
 
   if (loading) return <div className="text-center py-20 text-fuchsia-400 animate-pulse font-bold text-xl">Cargando detalles...</div>;

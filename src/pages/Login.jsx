@@ -1,7 +1,32 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginUser } from '../services/api';
 import Icon from '../components/Icon';
+
+// Bloqueo por intentos fallidos: 5 intentos y la cuenta se bloquea 15 minutos.
+// Nota: es un bloqueo en el navegador (localStorage), porque DummyJSON no
+// tiene bloqueo en el servidor. Borrar los datos del navegador lo reinicia;
+// un bloqueo real necesitaría un backend propio.
+const MAX_ATTEMPTS = 5;
+const LOCK_MINUTES = 15;
+const LOCK_MS = LOCK_MINUTES * 60 * 1000;
+
+const attemptsKey = (user) => `login-attempts:${user.trim().toLowerCase()}`;
+
+const readAttempts = (user) => {
+  try {
+    return JSON.parse(localStorage.getItem(attemptsKey(user)) || '{"count":0,"lockedUntil":0}');
+  } catch {
+    return { count: 0, lockedUntil: 0 };
+  }
+};
+
+const formatRemaining = (ms) => {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  return `${minutes}:${seconds}`;
+};
 
 export default function Login({ setUser, setRole }) {
   const [username, setUsername] = useState('');
@@ -10,23 +35,62 @@ export default function Login({ setUser, setRole }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [lockedUntil, setLockedUntil] = useState(0);
+  const [now, setNow] = useState(Date.now());
   const navigate = useNavigate();
+
+  const isLocked = lockedUntil > now;
+  const remainingMs = lockedUntil - now;
+
+  // Actualiza el contador del bloqueo cada segundo mientras esté activo.
+  useEffect(() => {
+    if (!isLocked) return undefined;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [isLocked]);
+
+  // Al escribir el usuario, revisa si esa cuenta está bloqueada.
+  useEffect(() => {
+    if (!username.trim()) {
+      setLockedUntil(0);
+      return;
+    }
+    const attempts = readAttempts(username);
+    setLockedUntil(attempts.lockedUntil || 0);
+    setNow(Date.now());
+  }, [username]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username || !password) return setError('Llena todos los campos');
-    
+
+    const attempts = readAttempts(username);
+    if (attempts.lockedUntil && attempts.lockedUntil > Date.now()) {
+      setLockedUntil(attempts.lockedUntil);
+      return setError(`Cuenta bloqueada por demasiados intentos. Inténtalo de nuevo en ${formatRemaining(attempts.lockedUntil - Date.now())} minutos.`);
+    }
+
     setLoading(true);
     setError('');
     try {
       const data = await loginUser(username, password);
+      localStorage.removeItem(attemptsKey(username));
       setUser(data);
       setRole(selectedRole);
       localStorage.setItem('user', JSON.stringify(data));
       localStorage.setItem('role', selectedRole);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message);
+      const nextCount = (attempts.count || 0) + 1;
+      if (nextCount >= MAX_ATTEMPTS) {
+        const locked = Date.now() + LOCK_MS;
+        localStorage.setItem(attemptsKey(username), JSON.stringify({ count: nextCount, lockedUntil: locked }));
+        setLockedUntil(locked);
+        setError(`Cuenta bloqueada por ${LOCK_MINUTES} minutos tras ${MAX_ATTEMPTS} intentos fallidos.`);
+      } else {
+        localStorage.setItem(attemptsKey(username), JSON.stringify({ count: nextCount, lockedUntil: 0 }));
+        setError(`${err.message}. Te quedan ${MAX_ATTEMPTS - nextCount} intentos.`);
+      }
     } finally {
       setLoading(false);
     }
@@ -36,7 +100,7 @@ export default function Login({ setUser, setRole }) {
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-10 bg-[#050505]">
       <div className="absolute top-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-violet-600/20 blur-[120px]" />
       <div className="absolute bottom-[-10%] right-[-10%] h-[500px] w-[500px] rounded-full bg-fuchsia-600/20 blur-[120px]" />
-      
+
       <section className="relative z-10 w-full max-w-[460px] rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl sm:p-10">
         <div className="mb-8 text-center">
           <span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-[0_0_20px_rgba(139,92,246,0.4)]">
@@ -45,7 +109,7 @@ export default function Login({ setUser, setRole }) {
           <h1 className="text-[29px] font-bold tracking-[-.035em] text-white">CulturaVibe</h1>
           <p className="mt-2 text-sm text-slate-400">Prueba con: <strong className="text-violet-400">emilys</strong> / <strong className="text-violet-400">emilyspass</strong></p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block">
             <span className="mb-2 block text-sm font-semibold text-slate-300">Tipo de Cuenta</span>
@@ -78,11 +142,16 @@ export default function Login({ setUser, setRole }) {
               </button>
             </span>
           </label>
-          
+
           {error && <p className="text-sm font-medium text-red-400 text-center">{error}</p>}
-          
-          <button disabled={loading} type="submit" className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3.5 text-sm font-bold text-white transition hover:opacity-90 shadow-[0_0_15px_rgba(139,92,246,0.4)] disabled:opacity-50">
-            {loading ? 'Entrando...' : `Entrar como ${selectedRole}`} <Icon name="chevronRight" size={18} />
+          {isLocked && (
+            <p className="text-sm font-semibold text-amber-300 text-center">
+              Podrás intentarlo de nuevo en {formatRemaining(remainingMs)}.
+            </p>
+          )}
+
+          <button disabled={loading || isLocked} type="submit" className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3.5 text-sm font-bold text-white transition hover:opacity-90 shadow-[0_0_15px_rgba(139,92,246,0.4)] disabled:opacity-50">
+            {loading ? 'Entrando...' : isLocked ? 'Cuenta bloqueada' : `Entrar como ${selectedRole}`} <Icon name="chevronRight" size={18} />
           </button>
         </form>
       </section>

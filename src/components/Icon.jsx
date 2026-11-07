@@ -2,7 +2,10 @@ export default function Icon({ name, size = 20, className = "" }) {
   const paths = {
     calendar: (<> <path d="M7 3v3M17 3v3M4 9h16" /> <rect x="4" y="5" width="16" height="16" rx="3" /> </>),
     chevronDown: <path d="m8 10 4 4 4-4" />,
+    chevronLeft: <path d="m15 18-6-6 6-6" />,
     chevronRight: <path d="m9 18 6-6-6-6" />,
+    briefcase: (<> <rect x="3" y="7" width="18" height="13" rx="2" /> <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18" /> </>),
+    palette: (<> <circle cx="12" cy="12" r="9" /> <circle cx="8.5" cy="9.5" r="1" fill="currentColor" /> <circle cx="12" cy="7.5" r="1" fill="currentColor" /> <circle cx="15.5" cy="9.5" r="1" fill="currentColor" /> <path d="M12 21a2.5 2.5 0 0 0 2.5-2.5c0-1.5-1-2-1-3.5" /> </>),
     edit: (<> <path d="m14 5 5 5" /> <path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z" /> </>),
     eye: (<> <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /> <circle cx="12" cy="12" r="2.5" /> </>),
     home: (<> <path d="m3 11 9-8 9 8" /> <path d="M5 10v10h14V10M9 20v-6h6v6" /> </>),

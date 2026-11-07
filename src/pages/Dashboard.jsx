@@ -6,11 +6,12 @@ import Icon from '../components/Icon';
 export default function Dashboard() {
   const navigate = useNavigate();
   const [previewEvents, setPreviewEvents] = useState([]);
+  const [totalEvents, setTotalEvents] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
 
   useEffect(() => {
     fetchEvents({ limit: 4, page: 1, search: '', category: '' })
-      .then(data => setPreviewEvents(data.events || []))
+      .then(data => { setPreviewEvents(data.events || []); setTotalEvents(data.total); })
       .catch(() => {})
       .finally(() => setLoadingPreview(false));
   }, []);
@@ -32,9 +33,9 @@ export default function Dashboard() {
 
       <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { title: "Eventos Activos", value: "100+", note: "En todo México", icon: "calendar", tone: "text-fuchsia-400 bg-fuchsia-500/20", target: "/catalog" },
+          { title: "Eventos Activos", value: totalEvents ? totalEvents.toLocaleString('es-MX') : '…', note: "En todo México", icon: "calendar", tone: "text-fuchsia-400 bg-fuchsia-500/20", target: "/catalog" },
           { title: "Categorías", value: "3", note: "Música, Teatro, Libros", icon: "palette", tone: "text-violet-400 bg-violet-500/20", target: "/catalog" },
-          { title: "Artistas Locales", value: "12", note: "Registrados", icon: "users", tone: "text-pink-400 bg-pink-500/20", target: "/artists" },
+          { title: "Artistas Locales", value: "5", note: "Registrados", icon: "users", tone: "text-pink-400 bg-pink-500/20", target: "/artists" },
           { title: "Próximo Evento", value: "Hoy", note: "Consulta la agenda", icon: "star", tone: "text-emerald-400 bg-emerald-500/20", target: "/catalog" },
         ].map((item, i) => (
           <article key={i} onClick={() => navigate(item.target)} className="group cursor-pointer rounded-3xl border border-white/5 bg-white/5 p-6 backdrop-blur-md transition-all hover:-translate-y-1 hover:bg-white/10 hover:border-white/20">
