@@ -9,7 +9,7 @@ import Catalog from './pages/Catalog';
 import EventDetail from './pages/EventDetail'; // <-- NUEVO
 import Artists from './pages/Artists';
 import Settings from './pages/Settings';
-import { onAuthStateChanged, isFirebaseConfigured, getFirebaseProfile } from './services/auth';
+import { subscribeToAuthChanges, isFirebaseConfigured, getFirebaseProfile } from './services/auth';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -37,7 +37,7 @@ export default function App() {
   // correo está verificado; si no, se pide verificar.
   useEffect(() => {
     if (!isFirebaseConfigured) return undefined;
-    const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
+    const unsubscribe = subscribeToAuthChanges(async (firebaseUser) => {
       if (!firebaseUser) {
         setPendingVerification(false);
         return;
