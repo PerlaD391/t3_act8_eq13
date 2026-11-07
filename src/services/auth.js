@@ -15,7 +15,15 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from './firebase';
 
-export { onAuthStateChanged, isFirebaseConfigured };
+export { isFirebaseConfigured };
+
+// Suscripción a cambios de sesión. La función de Firebase es
+// onAuthStateChanged(auth, callback): si se llama solo con el callback,
+// rompe la app al arrancar con "onAuthStateChanged is not a function".
+export const subscribeToAuthChanges = (callback) => {
+  if (!isFirebaseConfigured || !auth) return () => {};
+  return onAuthStateChanged(auth, callback);
+};
 
 export const NOTIFICATION_CATEGORIES = ['Music', 'Arts & Theatre', 'Miscellaneous'];
 export const NOTIFICATION_STATES = ['CDMX', 'NL', 'JAL', 'SIN', 'MEX', 'PUE', 'GRO', 'MOR'];
