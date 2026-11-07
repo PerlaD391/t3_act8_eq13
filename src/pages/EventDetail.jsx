@@ -49,6 +49,7 @@ export default function EventDetail() {
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
   const [agendado, setAgendado] = useState(() => {
     try {
       const misEventos = JSON.parse(localStorage.getItem('misEventos') || '[]');
@@ -89,6 +90,7 @@ export default function EventDetail() {
         venue: event._embedded?.venues?.[0]?.name || '',
         city: event._embedded?.venues?.[0]?.city?.name || '',
         state: event._embedded?.venues?.[0]?.state?.name || '',
+        url: event.url || '',
       });
       localStorage.setItem('misEventos', JSON.stringify(misEventos));
     }
@@ -115,6 +117,25 @@ export default function EventDetail() {
   const attractions = event._embedded?.attractions || [];
   const statusLabel = STATUS_LABELS[event.dates?.status?.code] || '';
   const calendarUrl = googleCalendarUrl(event, [venue, city, stateName].filter(Boolean).join(', '));
+
+  // Compartir el evento: por WhatsApp o copiando el enlace de esta página.
+  const shareText = `${event.name} — ${date} a las ${time} en ${venue}${city ? `, ${city}` : ''}${stateName ? `, ${stateName}` : ''}. ${window.location.href}`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      const input = document.createElement('textarea');
+      input.value = window.location.href;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
 
   return (
     <div className="mx-auto max-w-[1200px]">
@@ -228,6 +249,16 @@ export default function EventDetail() {
               )}
             </div>
           )}
+
+          {/* Compartir */}
+          <div className="mt-4 flex flex-col sm:flex-row gap-3">
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600/20 border border-emerald-500/40 px-4 py-3 text-sm font-bold text-emerald-300 hover:bg-emerald-600/30 transition">
+              <Icon name="share" size={18} /> Compartir por WhatsApp
+            </a>
+            <button onClick={handleCopyLink} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm font-bold text-white hover:bg-white/10 transition">
+              <Icon name={copied ? 'check' : 'share'} size={18} /> {copied ? '¡Enlace copiado!' : 'Copiar enlace'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
