@@ -209,8 +209,9 @@ export default function EventDetail() {
             <p className="text-slate-400 leading-relaxed">{info}</p>
           </div>
 
-          {/* Comprar boletos: la venta se hace en Ticketmaster */}
-          {event.url && (
+          {/* Comprar boletos: la venta se hace en Ticketmaster. Si la venta
+              ya cerró o el evento se canceló, no se muestra el botón. */}
+          {event.url && !['offsale', 'cancelled'].includes(event.dates?.status?.code) && (
             <a
               href={event.url}
               target="_blank"
@@ -219,6 +220,11 @@ export default function EventDetail() {
             >
               <Icon name="ticket" size={20} /> Comprar boletos en Ticketmaster <Icon name="external" size={16} />
             </a>
+          )}
+          {['offsale', 'cancelled'].includes(event.dates?.status?.code) && (
+            <p className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+              La venta de boletos para este evento ya está cerrada.
+            </p>
           )}
 
           <button
