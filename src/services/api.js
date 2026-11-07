@@ -1,5 +1,9 @@
 const DUMMY_BASE = 'https://dummyjson.com';
-const TM_API_KEY = 'gOd0zJv7QlALwTyGW2QA1ynHW3t4Zmcq';
+// Llave de Ticketmaster: SOLO en el archivo .env (VITE_TICKETMASTER_API_KEY).
+// Nunca va en el código: la llave anterior quedó expuesta en el historial
+// de git, así que hay que generar una nueva en Ticketmaster y ponerla en
+// el .env. Sin llave, la app muestra los eventos de respaldo.
+const TM_API_KEY = import.meta.env.VITE_TICKETMASTER_API_KEY || '';
 
 export const loginUser = async (username, password) => {
   const res = await fetch(`${DUMMY_BASE}/auth/login`, {
@@ -174,13 +178,38 @@ const fetchAllEvents = async ({ search = '', category = '', state = '' }) => {
   return result;
 };
 
-export const fetchEvents = async ({ limit = 12, page = 1, search = '', category = '', state = '' }) => {
+export const fetchEvents = async ({ limit = 12, page = 1, search = '', category = '', state = '', sort = 'date-asc' }) => {
   const safeLimit = [12, 24, 48].includes(Number(limit)) ? Number(limit) : 12;
   const safePage = Math.max(1, Number(page) || 1);
   const { events, total, source } = await fetchAllEvents({ search, category, state });
+  const sorted = [...events];
+  const eventDate = (e) => e.dates?.start?.localDate || '';
+  const eventTime = (e) => e.dates?.start?.localTime || '';
+  const eventPrice = (e) => e.priceRanges?.[0]?.min ?? null;
+  if (sort === 'date-desc') {
+    sorted.sort((a, b) => eventDate(b).localeCompare(eventDate(a)) || eventTime(b).localeCompare(eventTime(a)) || (a.name || '').localeCompare(b.name || ''));
+  } else if (sort === 'price-asc') {
+    sorted.sort((a, b) => {
+      const pa = eventPrice(a);
+      const pb = eventPrice(b);
+      if (pa === null && pb === null) return eventDate(a).localeCompare(eventDate(b));
+      if (pa === null) return 1;
+      if (pb === null) return -1;
+      return pa - pb || eventDate(a).localeCompare(eventDate(b));
+    });
+  } else if (sort === 'price-desc') {
+    sorted.sort((a, b) => {
+      const pa = eventPrice(a);
+      const pb = eventPrice(b);
+      if (pa === null && pb === null) return eventDate(a).localeCompare(eventDate(b));
+      if (pa === null) return 1;
+      if (pb === null) return -1;
+      return pb - pa || eventDate(a).localeCompare(eventDate(b));
+    });
+  }
   const startIndex = (safePage - 1) * safeLimit;
   return {
-    events: events.slice(startIndex, startIndex + safeLimit),
+    events: sorted.slice(startIndex, startIndex + safeLimit),
     total,
     source,
   };
