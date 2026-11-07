@@ -40,6 +40,19 @@ export default function Dashboard() {
       .catch(() => {});
   }, []);
 
+  // Próximo evento real de la cartelera (el primero de la vista previa).
+  const nextEvent = previewEvents[0] || null;
+  const nextEventDays = (() => {
+    if (!nextEvent?.dates?.start?.localDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.round((new Date(`${nextEvent.dates.start.localDate}T00:00:00`) - today) / (1000 * 60 * 60 * 24));
+  })();
+  const nextEventName = nextEvent?.name || '';
+  const shortNextName = nextEventName.length > 32 ? `${nextEventName.slice(0, 32)}…` : nextEventName;
+  const nextEventNote = !nextEvent ? 'Sin eventos próximos' : nextEventDays === 0 ? `Hoy: ${shortNextName}` : `días para ${shortNextName}`;
+  const nextEventValue = nextEventDays === null ? '—' : nextEventDays === 0 ? 'Hoy' : String(nextEventDays);
+
   return (
     <div className="mx-auto max-w-[1440px]">
       {/* HERO SECTION (Enfoque Nacional) */}
@@ -60,7 +73,7 @@ export default function Dashboard() {
           { title: "Eventos Activos", value: totalEvents ? totalEvents.toLocaleString('es-MX') : '…', note: "En todo México", icon: "calendar", tone: "text-fuchsia-400 bg-fuchsia-500/20", target: "/catalog" },
           { title: "Categorías", value: "3", note: "Música, Teatro, Libros", icon: "palette", tone: "text-violet-400 bg-violet-500/20", target: "/catalog" },
           { title: "Artistas Locales", value: artistsCount ? artistsCount.toLocaleString('es-MX') : '…', note: "En la cartelera", icon: "users", tone: "text-pink-400 bg-pink-500/20", target: "/artists" },
-          { title: "Próximo Evento", value: "Hoy", note: "Consulta la agenda", icon: "star", tone: "text-emerald-400 bg-emerald-500/20", target: "/catalog" },
+          { title: "Próximo Evento", value: nextEventValue, note: nextEventNote, icon: "star", tone: "text-emerald-400 bg-emerald-500/20", target: "/catalog" },
         ].map((item, i) => (
           <article key={i} onClick={() => navigate(item.target)} className="group cursor-pointer rounded-3xl border border-white/5 bg-white/5 p-6 backdrop-blur-md transition-all hover:-translate-y-1 hover:bg-white/10 hover:border-white/20">
             <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl ${item.tone}`}><Icon name={item.icon} size={24} /></div>
