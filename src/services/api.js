@@ -186,6 +186,38 @@ export const fetchEvents = async ({ limit = 12, page = 1, search = '', category 
   };
 };
 
+// Artistas reales de la cartelera: se juntan las atracciones
+// (_embedded.attractions) de todos los eventos cargados, se quitan
+// duplicados y se ordenan por cantidad de eventos próximos.
+export const fetchArtists = async ({ state = '' } = {}) => {
+  const { events, source } = await fetchAllEvents({ state });
+  const byId = new Map();
+  events.forEach((event) => {
+    (event._embedded?.attractions || []).forEach((attraction) => {
+      if (!attraction?.id || !attraction?.name) return;
+      const existing = byId.get(attraction.id) || {
+        id: attraction.id,
+        name: attraction.name,
+        image: [...(attraction.images || [])].sort((a, b) => (b.width || 0) - (a.width || 0))[0]?.url || '',
+        genre: attraction.classifications?.[0]?.genre?.name || attraction.classifications?.[0]?.segment?.name || '',
+        segment: attraction.classifications?.[0]?.segment?.name || '',
+        url: attraction.url || '',
+        events: [],
+      };
+      existing.events.push({ id: event.id, name: event.name, date: event.dates?.start?.localDate || '' });
+      byId.set(attraction.id, existing);
+    });
+  });
+  const artists = [...byId.values()]
+    .map((artist) => ({
+      ...artist,
+      eventCount: artist.events.length,
+      nextDate: artist.events.map((e) => e.date).filter(Boolean).sort()[0] || '',
+    }))
+    .sort((a, b) => b.eventCount - a.eventCount || a.name.localeCompare(b.name));
+  return { artists, source };
+};
+
 // Nueva función para obtener los detalles de un solo evento
 export const fetchEventById = async (id) => {
   // Si el ID empieza con "mx-", significa que es un evento de respaldo
