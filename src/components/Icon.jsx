@@ -23,6 +23,7 @@ export default function Icon({ name, size = 20, className = "" }) {
     ticket: (<> <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /> <path d="M13 5v2M13 11v2M13 17v2" /> </>),
     external: (<> <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /> <path d="M15 3h6v6" /> <path d="M10 14 21 3" /> </>),
     check: <path d="M20 6 9 17l-5-5" />,
+    share: (<> <circle cx="18" cy="5" r="3" /> <circle cx="6" cy="12" r="3" /> <circle cx="18" cy="19" r="3" /> <path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98" /> </>),
     "map-pin": (<> <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z" /> <circle cx="12" cy="10" r="3" /> </>),
     star: <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
   }
