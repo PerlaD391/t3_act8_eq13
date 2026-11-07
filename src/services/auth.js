@@ -10,6 +10,7 @@ import {
   signOut,
   sendEmailVerification,
   updateProfile,
+  updatePassword,
   onAuthStateChanged,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -137,4 +138,24 @@ export const getFirebaseProfile = async (uid) => {
     console.warn('No se pudo leer el perfil en Firestore.', error);
     return null;
   }
+};
+
+// Editar el perfil: nombre y teléfono. Actualiza Auth y Firestore.
+export const updateFirebaseProfile = async ({ name, phone }) => {
+  if (!isFirebaseConfigured || !auth?.currentUser) throw new Error('No hay sesión activa.');
+  const user = auth.currentUser;
+  if (name !== undefined) await updateProfile(user, { displayName: name });
+  await setDoc(
+    doc(db, 'users', user.uid),
+    { name: name ?? user.displayName ?? '', phone: phone ?? '' },
+    { merge: true },
+  );
+  return { name: name ?? user.displayName ?? '', phone: phone ?? '' };
+};
+
+// Cambiar la contraseña. Firebase puede pedir volver a iniciar sesión
+// si la sesión no es reciente (error auth/requires-recent-login).
+export const changeFirebasePassword = async (newPassword) => {
+  if (!isFirebaseConfigured || !auth?.currentUser) throw new Error('No hay sesión activa.');
+  await updatePassword(auth.currentUser, newPassword);
 };
