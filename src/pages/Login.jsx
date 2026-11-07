@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { loginUser } from '../services/api';
+import { loginWithFirebase, isFirebaseConfigured } from '../services/auth';
 import Icon from '../components/Icon';
 
 // Bloqueo por intentos fallidos: 5 intentos y la cuenta se bloquea 15 minutos.
@@ -73,6 +75,32 @@ export default function Login({ setUser, setRole }) {
     setLoading(true);
     setError('');
     try {
+      // Si Firebase está configurado y se escribe un correo, se entra con
+      // Firebase (cuenta real verificada). Si no, se usa el login de
+      // prueba de DummyJSON con nombre de usuario.
+      if (isFirebaseConfigured && username.includes('@')) {
+        const { user, profile, emailVerified } = await loginWithFirebase(username.trim(), password);
+        if (!emailVerified) {
+          navigate('/verify', { state: { email: username.trim() } });
+          return;
+        }
+        const displayName = profile?.name || user.displayName || '';
+        const [firstName, ...rest] = displayName.split(' ');
+        const userData = {
+          firstName: firstName || '',
+          lastName: rest.join(' '),
+          email: user.email,
+          image: user.photoURL || '',
+          firebaseUid: user.uid,
+        };
+        localStorage.removeItem(attemptsKey(username));
+        setUser(userData);
+        setRole(profile?.role || 'Cliente');
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('role', profile?.role || 'Cliente');
+        navigate('/dashboard');
+        return;
+      }
       const data = await loginUser(username, password);
       localStorage.removeItem(attemptsKey(username));
       setUser(data);
@@ -128,7 +156,7 @@ export default function Login({ setUser, setRole }) {
             <span className="mb-2 block text-sm font-semibold text-slate-300">Usuario</span>
             <span className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3 focus-within:border-violet-500 transition-all">
               <Icon name="user" size={19} className="text-slate-500" />
-              <input type="text" placeholder="Ej. emilys" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600" />
+              <input type="text" placeholder={isFirebaseConfigured ? "tu@correo.com o emilys" : "Ej. emilys"} value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600" />
             </span>
           </label>
 
@@ -154,6 +182,10 @@ export default function Login({ setUser, setRole }) {
             {loading ? 'Entrando...' : isLocked ? 'Cuenta bloqueada' : `Entrar como ${selectedRole}`} <Icon name="chevronRight" size={18} />
           </button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-slate-400">
+          ¿No tienes cuenta? <Link to="/register" className="font-semibold text-fuchsia-400 hover:text-fuchsia-300">Crear cuenta</Link>
+        </p>
       </section>
     </main>
   );

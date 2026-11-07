@@ -8,6 +8,26 @@ export default function Dashboard() {
   const [previewEvents, setPreviewEvents] = useState([]);
   const [totalEvents, setTotalEvents] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
+  const [reminders, setReminders] = useState([]);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('misEventos') || '[]');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const upcoming = saved
+        .map((event) => {
+          const date = event.date ? new Date(`${event.date}T00:00:00`) : null;
+          const daysLeft = date ? Math.round((date - today) / (1000 * 60 * 60 * 24)) : null;
+          return { ...event, daysLeft };
+        })
+        .filter((event) => event.daysLeft !== null && event.daysLeft >= 0 && event.daysLeft <= 7)
+        .sort((a, b) => a.daysLeft - b.daysLeft);
+      setReminders(upcoming);
+    } catch {
+      setReminders([]);
+    }
+  }, []);
 
   useEffect(() => {
     fetchEvents({ limit: 4, page: 1, search: '', category: '' })
@@ -48,6 +68,23 @@ export default function Dashboard() {
           </article>
         ))}
       </section>
+
+      {reminders.length > 0 && (
+        <section className="mb-8 rounded-3xl border border-fuchsia-500/20 bg-fuchsia-500/10 p-6 backdrop-blur-md">
+          <h3 className="font-bold text-white text-lg">Tus recordatorios</h3>
+          <p className="text-sm text-slate-400">Eventos que agendaste para los próximos 7 días.</p>
+          <div className="mt-4 space-y-2">
+            {reminders.map((event) => (
+              <div key={event.id} onClick={() => navigate(`/event/${event.id}`)} className="flex items-center justify-between gap-4 rounded-xl bg-black/30 px-4 py-3 cursor-pointer hover:bg-black/50 transition">
+                <span className="font-semibold text-white truncate">{event.name}</span>
+                <span className="shrink-0 rounded bg-fuchsia-500/20 px-2 py-1 text-xs text-fuchsia-300">
+                  {event.daysLeft === 0 ? '¡Es hoy!' : event.daysLeft === 1 ? 'Mañana' : `En ${event.daysLeft} días`} · {event.date}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <section className="rounded-3xl border border-white/5 bg-white/5 backdrop-blur-md flex flex-col">

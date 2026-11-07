@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Icon from './Icon';
+import { signOutFirebase } from '../services/auth';
 
 export default function Layout({ children, user, role, setUser }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOutFirebase();
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('role');
