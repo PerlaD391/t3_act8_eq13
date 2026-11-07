@@ -15,19 +15,6 @@ export const loginUser = async (username, password) => {
   return res.json();
 };
 
-const getFutureDate = (daysAhead) => {
-  const d = new Date();
-  d.setDate(d.getDate() + daysAhead);
-  return d.toISOString().split('T')[0];
-};
-
-const eventosNacionalesRespaldo = [
-  { id: 'mx-1', name: 'Concierto Sinfónico Nacional', dates: { start: { localDate: getFutureDate(10) } }, _embedded: { venues: [{ name: 'Palacio de Bellas Artes', state: { name: 'Ciudad de México', stateCode: 'CDMX' } }] }, classifications: [{ segment: { name: 'Music' } }], images: [{ url: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=80' }], priceRanges: [{ min: 500, max: 1500 }], info: 'Disfruta de una noche mágica con la Orquesta Sinfónica Nacional interpretando las mejores piezas clásicas.' },
-  { id: 'mx-2', name: 'Festival de Teatro de CDMX', dates: { start: { localDate: getFutureDate(15) } }, _embedded: { venues: [{ name: 'Teatro Insurgentes', state: { name: 'Ciudad de México', stateCode: 'CDMX' } }] }, classifications: [{ segment: { name: 'Arts & Theatre' } }], images: [{ url: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&q=80' }], priceRanges: [{ min: 200, max: 600 }], info: 'Las mejores compañías teatrales se reúnen para presentar obras clásicas y contemporáneas.' },
-  { id: 'mx-3', name: 'Noche de Jazz en Guadalajara', dates: { start: { localDate: getFutureDate(20) } }, _embedded: { venues: [{ name: 'Teatro Degollado', state: { name: 'Jalisco', stateCode: 'JAL' } }] }, classifications: [{ segment: { name: 'Music' } }], images: [{ url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&q=80' }], priceRanges: [{ min: 300, max: 800 }], info: 'Una velada íntima con los mejores exponentes del jazz nacional e internacional.' },
-  { id: 'mx-4', name: 'Exposición de Arte Contemporáneo', dates: { start: { localDate: getFutureDate(25) } }, _embedded: { venues: [{ name: 'Museo de Arte Moderno', state: { name: 'Ciudad de México', stateCode: 'CDMX' } }] }, classifications: [{ segment: { name: 'Arts & Theatre' } }], images: [{ url: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80' }], priceRanges: [{ min: 50, max: 100 }], info: 'Explora las nuevas tendencias del arte visual con obras de artistas emergentes.' },
-  { id: 'mx-5', name: 'Feria del Libro Monterrey', dates: { start: { localDate: getFutureDate(30) } }, _embedded: { venues: [{ name: 'Cintermex', state: { name: 'Nuevo León', stateCode: 'NL' } }] }, classifications: [{ segment: { name: 'Miscellaneous' } }], images: [{ url: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=600&q=80' }], priceRanges: [{ min: 0, max: 0 }], info: 'Encuentros con autores, presentaciones de libros y talleres literarios para toda la familia.' },
-];
 
 // ---------------------------------------------------------------------------
 // Ticketmaster: la API no permite paginar más allá de 1,000 resultados en
@@ -89,6 +76,8 @@ const splitWindows = async (start, end, baseParams, depth = 0) => {
     endDateTime: formatDateTime(end),
   });
   const data = await fetchJson(totalUrl).catch(() => null);
+  // Si la medición falla, se avisa con null para no mostrar eventos falsos.
+  if (!data) return null;
   const total = data?.page?.totalElements ?? 0;
   if (total === 0) return [];
   if (total < TM_MAX_PAGING || depth >= 5) {
@@ -99,6 +88,7 @@ const splitWindows = async (start, end, baseParams, depth = 0) => {
     splitWindows(start, mid, baseParams, depth + 1),
     splitWindows(mid, end, baseParams, depth + 1),
   ]);
+  if (first === null || second === null) return null;
   return [...first, ...second];
 };
 
@@ -136,17 +126,22 @@ const fetchAllEvents = async ({ search = '', category = '', state = '' }) => {
   if (state && state !== 'all') baseParams.stateCode = state;
 
   let merged = [];
-  let source = 'ticketmaster';
+  let loadFailed = false;
   try {
     const windows = await splitWindows(today, endDate, baseParams);
-    const results = await runWithConcurrency(
-      windows.map((window) => () => fetchWindowEvents(window, baseParams)),
-      3,
-    );
-    merged = results.flat();
+    if (windows === null) {
+      loadFailed = true;
+    } else {
+      const results = await runWithConcurrency(
+        windows.map((window) => () => fetchWindowEvents(window, baseParams)),
+        3,
+      );
+      merged = results.flat();
+    }
   } catch (error) {
-    console.warn('Error al conectar con Ticketmaster. Usando eventos de respaldo.', error);
+    console.warn('Error al conectar con Ticketmaster.', error);
     merged = [];
+    loadFailed = true;
   }
 
   // Quitar duplicados (las ventanas se tocan en los bordes) y ordenar por fecha.
@@ -158,7 +153,7 @@ const fetchAllEvents = async ({ search = '', category = '', state = '' }) => {
   });
   // Solo eventos con boletos a la venta: se quitan los de venta cerrada,
   // cancelados, pospuestos o reprogramados. Los eventos sin código de
-  // estado se conservan (por ejemplo, los de respaldo).
+  // estado se conservan.
   merged = merged.filter((event) => {
     const code = event.dates?.status?.code;
     return !code || code === 'onsale';
@@ -170,17 +165,9 @@ const fetchAllEvents = async ({ search = '', category = '', state = '' }) => {
     return dateA.localeCompare(dateB);
   });
 
-  if (merged.length === 0) {
-    source = 'fallback';
-    merged = eventosNacionalesRespaldo.filter((event) => {
-      if (search && !event.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (category && category !== 'all' && event.classifications?.[0]?.segment?.name !== category) return false;
-      if (state && state !== 'all' && event._embedded?.venues?.[0]?.state?.stateCode !== state) return false;
-      return true;
-    });
-  }
-
-  const result = { events: merged, total: merged.length, source };
+  // Sin eventos de respaldo: si Ticketmaster no respondió, la lista queda
+  // vacía y se avisa con `error` para mostrar el mensaje en el catálogo.
+  const result = { events: merged, total: merged.length, error: loadFailed };
   eventsCache.set(cacheKey, { ...result, fetchedAt: Date.now() });
   return result;
 };
@@ -188,7 +175,7 @@ const fetchAllEvents = async ({ search = '', category = '', state = '' }) => {
 export const fetchEvents = async ({ limit = 12, page = 1, search = '', category = '', state = '', sort = 'date-asc' }) => {
   const safeLimit = [12, 24, 48].includes(Number(limit)) ? Number(limit) : 12;
   const safePage = Math.max(1, Number(page) || 1);
-  const { events, total, source } = await fetchAllEvents({ search, category, state });
+  const { events, total, error } = await fetchAllEvents({ search, category, state });
   const sorted = [...events];
   const eventDate = (e) => e.dates?.start?.localDate || '';
   const eventTime = (e) => e.dates?.start?.localTime || '';
@@ -218,7 +205,7 @@ export const fetchEvents = async ({ limit = 12, page = 1, search = '', category 
   return {
     events: sorted.slice(startIndex, startIndex + safeLimit),
     total,
-    source,
+    error,
   };
 };
 
@@ -226,7 +213,7 @@ export const fetchEvents = async ({ limit = 12, page = 1, search = '', category 
 // (_embedded.attractions) de todos los eventos cargados, se quitan
 // duplicados y se ordenan por cantidad de eventos próximos.
 export const fetchArtists = async ({ state = '' } = {}) => {
-  const { events, source } = await fetchAllEvents({ state });
+  const { events } = await fetchAllEvents({ state });
   const byId = new Map();
   events.forEach((event) => {
     (event._embedded?.attractions || []).forEach((attraction) => {
@@ -251,16 +238,11 @@ export const fetchArtists = async ({ state = '' } = {}) => {
       nextDate: artist.events.map((e) => e.date).filter(Boolean).sort()[0] || '',
     }))
     .sort((a, b) => b.eventCount - a.eventCount || a.name.localeCompare(b.name));
-  return { artists, source };
+  return { artists };
 };
 
 // Nueva función para obtener los detalles de un solo evento
 export const fetchEventById = async (id) => {
-  // Si el ID empieza con "mx-", significa que es un evento de respaldo
-  if (id.startsWith('mx-')) {
-    return eventosNacionalesRespaldo.find(e => e.id === id) || null;
-  }
-
   try {
     const res = await fetch(`/api-ticketmaster/events/${id}.json?apikey=${TM_API_KEY}`);
     if (res.ok) {
