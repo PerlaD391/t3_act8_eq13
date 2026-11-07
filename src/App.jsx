@@ -7,6 +7,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import Dashboard from './pages/Dashboard';
 import Catalog from './pages/Catalog';
 import EventDetail from './pages/EventDetail'; // <-- NUEVO
+import MisEventos from './pages/MisEventos';
 import Artists from './pages/Artists';
 import Settings from './pages/Settings';
 import { subscribeToAuthChanges, isFirebaseConfigured, getFirebaseProfile } from './services/auth';
@@ -80,6 +81,8 @@ export default function App() {
 
         {/* NUEVA RUTA PARA EL DETALLE DEL EVENTO */}
         <Route path="/event/:id" element={user ? <Layout user={user} role={role} setUser={setUser}><EventDetail /></Layout> : pendingVerification ? <Navigate to="/verify" replace /> : <Navigate to="/" replace />} />
+
+        <Route path="/mis-eventos" element={user ? <Layout user={user} role={role} setUser={setUser}><MisEventos /></Layout> : pendingVerification ? <Navigate to="/verify" replace /> : <Navigate to="/" replace />} />
 
         <Route path="/artists" element={user ? <Layout user={user} role={role} setUser={setUser}><Artists /></Layout> : pendingVerification ? <Navigate to="/verify" replace /> : <Navigate to="/" replace />} />
         <Route path="/settings" element={user ? <Layout user={user} role={role} setUser={setUser}><Settings user={user} role={role} /></Layout> : pendingVerification ? <Navigate to="/verify" replace /> : <Navigate to="/" replace />} />
