@@ -85,7 +85,7 @@ export default function App() {
         <Route path="/mis-eventos" element={user ? <Layout user={user} role={role} setUser={setUser}><MisEventos /></Layout> : pendingVerification ? <Navigate to="/verify" replace /> : <Navigate to="/" replace />} />
 
         <Route path="/artists" element={user ? <Layout user={user} role={role} setUser={setUser}><Artists /></Layout> : pendingVerification ? <Navigate to="/verify" replace /> : <Navigate to="/" replace />} />
-        <Route path="/settings" element={user ? <Layout user={user} role={role} setUser={setUser}><Settings user={user} role={role} /></Layout> : pendingVerification ? <Navigate to="/verify" replace /> : <Navigate to="/" replace />} />
+        <Route path="/settings" element={user ? <Layout user={user} role={role} setUser={setUser}><Settings user={user} role={role} setUser={setUser} /></Layout> : pendingVerification ? <Navigate to="/verify" replace /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
