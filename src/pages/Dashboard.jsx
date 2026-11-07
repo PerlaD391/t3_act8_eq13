@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchEvents } from '../services/api';
+import { fetchEvents, fetchArtists } from '../services/api';
 import Icon from '../components/Icon';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [previewEvents, setPreviewEvents] = useState([]);
   const [totalEvents, setTotalEvents] = useState(null);
+  const [artistsCount, setArtistsCount] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
   const [reminders, setReminders] = useState([]);
 
@@ -34,6 +35,9 @@ export default function Dashboard() {
       .then(data => { setPreviewEvents(data.events || []); setTotalEvents(data.total); })
       .catch(() => {})
       .finally(() => setLoadingPreview(false));
+    fetchArtists()
+      .then(({ artists }) => setArtistsCount(artists.length))
+      .catch(() => {});
   }, []);
 
   return (
@@ -55,7 +59,7 @@ export default function Dashboard() {
         {[
           { title: "Eventos Activos", value: totalEvents ? totalEvents.toLocaleString('es-MX') : '…', note: "En todo México", icon: "calendar", tone: "text-fuchsia-400 bg-fuchsia-500/20", target: "/catalog" },
           { title: "Categorías", value: "3", note: "Música, Teatro, Libros", icon: "palette", tone: "text-violet-400 bg-violet-500/20", target: "/catalog" },
-          { title: "Artistas Locales", value: "5", note: "Registrados", icon: "users", tone: "text-pink-400 bg-pink-500/20", target: "/artists" },
+          { title: "Artistas Locales", value: artistsCount ? artistsCount.toLocaleString('es-MX') : '…', note: "En la cartelera", icon: "users", tone: "text-pink-400 bg-pink-500/20", target: "/artists" },
           { title: "Próximo Evento", value: "Hoy", note: "Consulta la agenda", icon: "star", tone: "text-emerald-400 bg-emerald-500/20", target: "/catalog" },
         ].map((item, i) => (
           <article key={i} onClick={() => navigate(item.target)} className="group cursor-pointer rounded-3xl border border-white/5 bg-white/5 p-6 backdrop-blur-md transition-all hover:-translate-y-1 hover:bg-white/10 hover:border-white/20">
@@ -76,7 +80,15 @@ export default function Dashboard() {
           <div className="mt-4 space-y-2">
             {reminders.map((event) => (
               <div key={event.id} onClick={() => navigate(`/event/${event.id}`)} className="flex items-center justify-between gap-4 rounded-xl bg-black/30 px-4 py-3 cursor-pointer hover:bg-black/50 transition">
-                <span className="font-semibold text-white truncate">{event.name}</span>
+                <div className="min-w-0 flex-1">
+                  <span className="font-semibold text-white truncate block">{event.name}</span>
+                  {(event.venue || event.city || event.state) && (
+                    <span className="text-xs text-slate-400 truncate block">
+                      {[event.venue, event.city, event.state].filter(Boolean).join(' · ')}
+                      {event.time ? ` · ${event.time}` : ''}
+                    </span>
+                  )}
+                </div>
                 <span className="shrink-0 rounded bg-fuchsia-500/20 px-2 py-1 text-xs text-fuchsia-300">
                   {event.daysLeft === 0 ? '¡Es hoy!' : event.daysLeft === 1 ? 'Mañana' : `En ${event.daysLeft} días`} · {event.date}
                 </span>
@@ -109,7 +121,7 @@ export default function Dashboard() {
             )}
           </div>
           <div className="p-4 border-t border-white/5 bg-white/[0.02] rounded-b-3xl">
-            <button onClick={() => navigate('/catalog')} className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-white font-semibold border border-white/10">Ir a la Tabla CRUD</button>
+            <button onClick={() => navigate('/catalog')} className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-white font-semibold border border-white/10">Ir a la cartelera</button>
           </div>
         </section>
         
