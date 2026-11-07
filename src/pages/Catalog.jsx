@@ -18,6 +18,13 @@ const STATES = [
   { value: 'MOR', label: 'Morelos' },
 ];
 
+const SORT_OPTIONS = [
+  { value: 'date-asc', label: 'Fecha: próximos primero' },
+  { value: 'date-desc', label: 'Fecha: más lejanos primero' },
+  { value: 'price-asc', label: 'Precio: menor a mayor' },
+  { value: 'price-desc', label: 'Precio: mayor a menor' },
+];
+
 const readStoredLimit = () => {
   const stored = Number(localStorage.getItem(LIMIT_STORAGE_KEY));
   return LIMIT_OPTIONS.includes(stored) ? stored : 12;
@@ -40,6 +47,8 @@ export default function Catalog() {
   const search = searchParams.get('q') || '';
   const category = searchParams.get('category') || 'all';
   const state = searchParams.get('state') || 'all';
+  const sortParam = searchParams.get('sort') || 'date-asc';
+  const sort = SORT_OPTIONS.some((o) => o.value === sortParam) ? sortParam : 'date-asc';
 
   // Si se entra al catálogo sin límite en la URL, se restaura el último
   // elegido (12, 24 o 48) para que la configuración se mantenga.
@@ -75,7 +84,7 @@ export default function Catalog() {
 
   useEffect(() => {
     setLoading(true);
-    fetchEvents({ limit, page, search, category, state })
+    fetchEvents({ limit, page, search, category, state, sort })
       .then((data) => {
         setEvents(data.events);
         setTotal(data.total);
@@ -84,7 +93,7 @@ export default function Catalog() {
       })
       .catch(() => setError('No se pudieron cargar los eventos.'))
       .finally(() => setLoading(false));
-  }, [limit, page, search, category, state]);
+  }, [limit, page, search, category, state, sort]);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -119,6 +128,14 @@ export default function Catalog() {
           <label className="relative flex items-center">
             <select value={state} onChange={(e) => updateParams('state', e.target.value)} className="appearance-none rounded-xl border border-white/10 bg-black/50 py-2.5 pl-4 pr-10 text-sm font-medium text-slate-300 outline-none focus:border-fuchsia-500">
               {STATES.map((item) => (
+                <option key={item.value} value={item.value}>{item.label}</option>
+              ))}
+            </select>
+            <Icon name="chevronDown" size={16} className="absolute right-3 text-white pointer-events-none" />
+          </label>
+          <label className="relative flex items-center">
+            <select value={sort} onChange={(e) => updateParams('sort', e.target.value)} className="appearance-none rounded-xl border border-white/10 bg-black/50 py-2.5 pl-4 pr-10 text-sm font-medium text-slate-300 outline-none focus:border-fuchsia-500">
+              {SORT_OPTIONS.map((item) => (
                 <option key={item.value} value={item.value}>{item.label}</option>
               ))}
             </select>
