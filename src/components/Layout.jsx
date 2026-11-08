@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Icon from './Icon';
-import { signOutFirebase } from '../services/auth';
 
 export default function Layout({ children, user, role, setUser }) {
   const navigate = useNavigate();
@@ -9,6 +8,9 @@ export default function Layout({ children, user, role, setUser }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = async () => {
+    // Importación dinámica: Firebase solo se carga al cerrar sesión, no
+    // en el paquete inicial.
+    const { signOutFirebase } = await import('../services/auth');
     await signOutFirebase();
     setUser(null);
     localStorage.removeItem('user');

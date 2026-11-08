@@ -2,8 +2,19 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { loginUser } from '../services/api';
-import { loginWithFirebase, isFirebaseConfigured } from '../services/auth';
 import Icon from '../components/Icon';
+
+// Firebase se detecta por las variables del .env (sin importar Firebase,
+// para que el login no meta su código en el paquete inicial). Si está
+// configurado y se escribe un correo, el login se hace con Firebase.
+const FIREBASE_ON = Boolean(
+  import.meta.env.VITE_FIREBASE_API_KEY &&
+  import.meta.env.VITE_FIREBASE_AUTH_DOMAIN &&
+  import.meta.env.VITE_FIREBASE_PROJECT_ID &&
+  import.meta.env.VITE_FIREBASE_STORAGE_BUCKET &&
+  import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID &&
+  import.meta.env.VITE_FIREBASE_APP_ID,
+);
 
 // Bloqueo por intentos fallidos: 5 intentos y la cuenta se bloquea 15 minutos.
 // Nota: es un bloqueo en el navegador (localStorage), porque DummyJSON no
@@ -33,7 +44,6 @@ const formatRemaining = (ms) => {
 export default function Login({ setUser, setRole }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState("Admin");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -78,7 +88,8 @@ export default function Login({ setUser, setRole }) {
       // Si Firebase está configurado y se escribe un correo, se entra con
       // Firebase (cuenta real verificada). Si no, se usa el login de
       // prueba de DummyJSON con nombre de usuario.
-      if (isFirebaseConfigured && username.includes('@')) {
+      if (FIREBASE_ON && username.includes('@')) {
+        const { loginWithFirebase } = await import('../services/auth');
         const { user, profile, emailVerified } = await loginWithFirebase(username.trim(), password);
         if (!emailVerified) {
           navigate('/verify', { state: { email: username.trim() } });
@@ -104,9 +115,12 @@ export default function Login({ setUser, setRole }) {
       const data = await loginUser(username, password);
       localStorage.removeItem(attemptsKey(username));
       setUser(data);
-      setRole(selectedRole);
+      // La cuenta de prueba entra como Cliente: el rol ya no se elige en
+      // el login (antes cualquiera podía entrar como Admin). Con Firebase
+      // el rol es el que se guardó al registrarse.
+      setRole('Cliente');
       localStorage.setItem('user', JSON.stringify(data));
-      localStorage.setItem('role', selectedRole);
+      localStorage.setItem('role', 'Cliente');
       navigate('/dashboard');
     } catch (err) {
       const nextCount = (attempts.count || 0) + 1;
@@ -140,23 +154,10 @@ export default function Login({ setUser, setRole }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-300">Tipo de Cuenta</span>
-            <div className="relative">
-              <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} className="w-full appearance-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-violet-500">
-                <option value="Admin">Administrador</option>
-                <option value="Empresa">Empresa Organizadora</option>
-                <option value="Artista">Artista / Expositor</option>
-                <option value="Cliente">Cliente / Público General</option>
-              </select>
-              <Icon name="chevronDown" size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-            </div>
-          </label>
-
-          <label className="block">
             <span className="mb-2 block text-sm font-semibold text-slate-300">Usuario</span>
             <span className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3 focus-within:border-violet-500 transition-all">
               <Icon name="user" size={19} className="text-slate-500" />
-              <input type="text" placeholder={isFirebaseConfigured ? "tu@correo.com o emilys" : "Ej. emilys"} value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600" />
+              <input type="text" placeholder={FIREBASE_ON ? "tu@correo.com o emilys" : "Ej. emilys"} value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600" />
             </span>
           </label>
 
@@ -179,7 +180,7 @@ export default function Login({ setUser, setRole }) {
           )}
 
           <button disabled={loading || isLocked} type="submit" className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3.5 text-sm font-bold text-white transition hover:opacity-90 shadow-[0_0_15px_rgba(139,92,246,0.4)] disabled:opacity-50">
-            {loading ? 'Entrando...' : isLocked ? 'Cuenta bloqueada' : `Entrar como ${selectedRole}`} <Icon name="chevronRight" size={18} />
+            {loading ? 'Entrando...' : isLocked ? 'Cuenta bloqueada' : 'Entrar'} <Icon name="chevronRight" size={18} />
           </button>
         </form>
 
