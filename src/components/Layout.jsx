@@ -7,7 +7,11 @@ export default function Layout({ children, user, role, setUser }) {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Importación dinámica: Firebase solo se carga al cerrar sesión, no
+    // en el paquete inicial.
+    const { signOutFirebase } = await import('../services/auth');
+    await signOutFirebase();
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('role');
@@ -17,12 +21,14 @@ export default function Layout({ children, user, role, setUser }) {
   const navItems = [
     { label: "Panel Principal", icon: "home", path: "/dashboard" },
     { label: "Calendario de Eventos", icon: "calendar", path: "/catalog" },
+    { label: "Mis Eventos", icon: "ticket", path: "/mis-eventos" },
     { label: "Directorio de Artistas", icon: "users", path: "/artists" },
     { label: "Configuración", icon: "settings", path: "/settings" },
   ];
 
   const getTitle = () => {
     if (location.pathname === '/catalog') return "Calendario de Eventos";
+    if (location.pathname === '/mis-eventos') return "Mis Eventos";
     if (location.pathname === '/artists') return "Directorio de Artistas";
     if (location.pathname === '/settings') return "Configuración";
     return "Panel Principal";

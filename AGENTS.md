@@ -1,37 +1,59 @@
-# figma-make-app
+# CulturaVibe
 
-React + Vite + Tailwind CSS project running inside Figma Make.
+Sistema de eventos culturales en México (Actividad 8, Programación Web, equipo 13).
+React 19 + Vite + Tailwind CSS v4 + React Router. Modo oscuro. Archivos `.jsx`
+(`src/main.jsx`, `src/App.jsx`, `vite.config.js`).
 
-## Development Server
+## Qué hace
 
-A Vite development server is **already running** on `$PORT` (default 8443). You don't need to start it manually.
+- Catálogo de eventos reales de **Ticketmaster** (México): carga por rangos de
+  fecha porque la API no deja paginar más allá de 1,000 resultados por consulta
+  (`página × tamaño < 1,000`). Solo muestra eventos con boletos a la venta.
+- Filtro por estado, buscador, orden (fecha/precio) y límite por página
+  persistente (12/24/48). Detalle con estado/ciudad, precio, artistas reales
+  y botón de compra a Ticketmaster. Agenda propia ("Mis eventos") en
+  `localStorage`.
+- Login con cuenta de prueba DummyJSON (`emilys` / `emilyspass`) y cuentas
+  reales con **Firebase Auth** (registro con verificación por correo, perfil en
+  Firestore, preferencias de notificaciones). Bloqueo de login tras 5 intentos
+  fallidos por 15 minutos (solo en el navegador).
+- Sin datos inventados: si Ticketmaster no responde, el catálogo muestra un
+  mensaje de error, no eventos de respaldo.
 
-- Preview URL: The user can access the running app through the preview panel
-- Hot reload: Changes to source files are reflected immediately
+## Comandos
 
-## Project Structure
+- `npm run dev` — desarrollo local (el proxy `/api-ticketmaster` de
+  `vite.config.js` redirige a Ticketmaster).
+- `npm run build` — compila a `dist/` (Vite incrusta las variables `VITE_*`
+  del `.env` en ese momento).
+- `npm run preview` — sirve el build local.
 
-This is the canonical project structure. Start with task-relevant files below. Only follow imports or inspect other files when required, when a documented path is missing, or when the repository contradicts this guide.
+## Variables de entorno (`.env`, nunca en el repo)
 
-- `src/main.tsx` - React entrypoint; imports `src/index.css` and mounts `src/App.tsx` into the `#root` element
-- `src/App.tsx` - Primary application component and the usual starting point for UI work
-- `src/index.css` - Global CSS entrypoint and Tailwind CSS v4 import
-- `index.html` - Vite HTML shell containing the `#root` element and loading `src/main.tsx`
-- `package.json` - Project dependencies and the Vite build, development, preview, and formatting scripts
-- `vite.config.ts` - Vite configuration with React, Tailwind CSS v4, and Figma Make plugins plus the `@` alias for `src`
-- `.mise.toml` - Toolchain versions for Node.js and pnpm
+- `VITE_TICKETMASTER_API_KEY` — llave de Ticketmaster (sin ella el catálogo
+  sale vacío). Rotarla si quedó expuesta en el historial de git.
+- `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`,
+  `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`,
+  `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` — proyecto de
+  Firebase (ver `FIREBASE_SETUP.md`).
 
-## Dependencies
+## Despliegue (VPS Contabo, Ubuntu)
 
-- Runtime: React 19 and React DOM 19
-- Styling: Tailwind CSS v4 with the `@tailwindcss/vite` plugin
-- Build tooling: Vite 8, TypeScript 5.7, and `@vitejs/plugin-react`
-- Formatting: oxfmt
+Se compila en local y se sube el `dist` con
+`scp -r .\dist\* root@13.140.226.55:/var/www/html/t3_act8_eq13/`.
+La app se sirve en `http://13.140.226.55/t3_act8_eq13/` (el `base` de
+`vite.config.js` es `/t3_act8_eq13/` y el proxy `/api-ticketmaster` ya existe
+en el servidor). Antes de compilar, confirmar la rama
+(`git branch --show-current` = `mejoras-todos-eventos`) y verificar el
+paquete con `findstr /C:"culturavibe-events-per-page" dist\assets\*.js`.
 
-## Styling
+## Estructura
 
-This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin configured in `vite.config.ts`. `src/index.css` imports Tailwind with `@import 'tailwindcss';`. Use Tailwind utility classes directly in JSX and put global CSS or Tailwind v4 theme customization in `src/index.css`. This scaffold does not need a Tailwind config file or PostCSS config.
-
-`src/main.tsx` imports `src/index.css`, so global font wiring belongs in `src/index.css`. Keep CSS `@import` statements first, then add any `@font-face` rules and font-family defaults there.
-
-Tailwind emits utility classes in `@layer utilities`, and CSS outside any cascade layer overrides every layer regardless of specificity. Put global element styles, such as resets and defaults for `body`, headings, `button`, or `input`, inside `@layer base { ... }` so utility classes on those elements still apply. Tailwind's Preflight already applies `box-sizing: border-box`, removes default margins, and sets `font: inherit` on form controls, so do not repeat those rules.
+- `src/services/api.js` — Ticketmaster (carga por ventanas, dedupe, filtro
+  onsale) y login DummyJSON.
+- `src/services/auth.js` — Firebase Auth + Firestore (registro, verificación,
+  perfil, preferencias, cambio de contraseña).
+- `src/services/firebase.js` — inicialización de Firebase desde el `.env`.
+- `src/pages/` — Dashboard, Catalog, EventDetail, Artists, MisEventos,
+  Settings, Login, Register, VerifyEmail.
+- `src/components/` — Layout, EventCard, Icon.
